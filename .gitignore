@@ -161,4 +161,4 @@ cython_debug/
 
 # project specific
 test_data/
-
+data/

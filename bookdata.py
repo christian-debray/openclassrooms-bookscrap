@@ -20,7 +20,10 @@ class BookData:
         self.review_rating: int = 0
         self.image_url: str = ""
 
-    def __repr__(self):
+    def export(self):
+        """
+        export this book's data as a dictionary
+        """
         d = {
             "product_page_url": self.product_page_url,
             "universal_product_code": self.universal_product_code,
@@ -33,5 +36,8 @@ class BookData:
             "review_rating": self.review_rating,
             "image_url": self.image_url
         }
-        return repr(d)
+        return d
+
+    def __repr__(self):
+        return repr(self.export())
 

@@ -11,5 +11,7 @@ once all packages and dependencies have been installed in a vritual environment:
 
     `$ python scrapebooks.py`
 
-For now, we just output a dict with the data found on the book's product page.
+Reads book data from https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html
+and appends the scraped data to data/test_book.csv
 
+If the file doesn't exist, creates the file and adds the CSV headers before appending the data.
