@@ -15,10 +15,11 @@ class BookDataReader:
     Read data from an HTML source, and produce BookData objects.
     """
     def __init__(self):
-        pass
+        self._soup: BeautifulSoup
 
     def read_from_html(self, html_str: str) -> BookData:
         markup: BeautifulSoup = BeautifulSoup(html_str, 'html.parser')
+        self._soup = markup
         book = BookData()
         product_page = markup.find(name="article", class_="product_page")
         # check we're actually on a product description page...
@@ -52,11 +53,11 @@ class BookDataReader:
         """
         return " ".join([s.strip() for s in re.split(r'[\t\n\r\f\v]+', in_str)])
 
-    def _read_price(self, price_str) -> float:
+    def _read_price(self, price_str: str) -> float:
         """
         expected input: £000.00
         """
-        return float(price_str[1:])
+        return float((price_str.strip())[1:].strip())
 
     def _read_number_in_stock(self, in_str) -> int:
         """
