@@ -84,9 +84,11 @@ if __name__ == "__main__":
     book = reader.read_from_html(book_html)
     book.product_page_url = scrape_url
 
-    print("Export data as CSV to {0}".format(csv_output_file))
-
-    writer = BookDataWriter(csv_output_file)
-    if success := writer.append_data(book):
-        print(f"wrote to {csv_output_file}")
+    if (book.is_valid()):
+        print("Export data as CSV to {0}".format(csv_output_file))
+        writer = BookDataWriter(csv_output_file)
+        if success := writer.append_data(book):
+            print(f"wrote to {csv_output_file}")
+    else:
+            print("Invalid book data, skip record.")
     print("done.")

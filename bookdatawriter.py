@@ -13,7 +13,7 @@ class BookDataWriter:
     """
     def __init__(self, filename: str):
         # check path to output file exists and is writable
-        path = os.path.dirname(filename) or os.path.curdir()
+        path = os.path.dirname(filename) or os.path.curdir
         self.path = os.path.abspath(path)
         if not(os.path.exists(path) and os.access(path, os.W_OK)):
             raise FileNotFoundError("Can't output to CSV file: base dir is not accessible (check the base directory exists and is writable)")

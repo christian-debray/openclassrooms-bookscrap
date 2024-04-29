@@ -27,22 +27,30 @@ class BookDataReader:
             return None
         # Use the css selectors defined in our mapping class ot extract the data:
         if title_tag := markup.css.select_one(CSSMapping.title_selector):
-            book.title = self._normalize_string(title_tag.string)
+            book.title = BookData.filter_title(self._normalize_string(title_tag.string))
+
         if product_code_tag := markup.css.select_one(CSSMapping.universal_product_code_selector):
-            book.universal_product_code = self._normalize_string(product_code_tag.string)
+            book.universal_product_code = BookData.filter_universal_product_code(self._normalize_string(product_code_tag.string))
+
         if category_tag := markup.css.select_one(CSSMapping.category_selector):
-            book.category = self._normalize_string(category_tag.string)
+            book.category = BookData.filter_category(self._normalize_string(category_tag.string))
+
         if price_incl_tax_tag := markup.css.select_one(CSSMapping.price_including_tax_selector):
-            book.price_including_tax = self._read_price(self._normalize_string(price_incl_tax_tag.string))
+            book.price_including_tax = BookData.filter_price(self._normalize_string(price_incl_tax_tag.string))
+
         if price_excl_tax_tag := markup.css.select_one(CSSMapping.price_excluding_tax_selector):
-            book.price_excluding_tax = self._read_price(self._normalize_string(price_excl_tax_tag.string))
+            book.price_excluding_tax = BookData.filter_price(self._normalize_string(price_excl_tax_tag.string))
+
         if number_available_tag := markup.css.select_one(CSSMapping.number_available_selector):
             raw = self._normalize_string(" ".join(number_available_tag.stripped_strings))
-            book.number_available = self._read_number_in_stock(raw)
+            book.number_available = BookData.filter_number_available(self._read_number_in_stock(raw))
+
         if product_description_tag := markup.css.select_one(CSSMapping.product_description_selector):
             book.product_description = " ".join(product_description_tag.stripped_strings)
+
         if review_rating_tag := markup.css.select_one(CSSMapping.review_rating_selector):
-            book.review_rating = self._read_review_rating(review_rating_tag)
+            book.review_rating = BookData.filter_review_rating(self._read_review_rating(review_rating_tag))
+
         if image_url_tag := markup.css.select_one(CSSMapping.image_url_selector):
             book.image_url = image_url_tag.attrs.get('src', None)
         return book
@@ -52,12 +60,6 @@ class BookDataReader:
         normalizes a string for output
         """
         return " ".join([s.strip() for s in re.split(r'[\t\n\r\f\v]+', in_str)])
-
-    def _read_price(self, price_str: str) -> float:
-        """
-        expected input: £000.00
-        """
-        return float((price_str.strip())[1:].strip())
 
     def _read_number_in_stock(self, in_str) -> int:
         """
