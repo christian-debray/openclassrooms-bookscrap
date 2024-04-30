@@ -10,7 +10,7 @@ class RemoteDataSource:
     wrap remote connection utility
     """
 
-    def __init__(self, url: str):
+    def __init__(self, url: str = None):
         self.url:str
         self.response: requests.Response
         self.session: requests.Session = requests.session()
@@ -23,7 +23,7 @@ class RemoteDataSource:
         raises an HTTPError if connection error occured.
         """
         self.url = url
-        self.response = self.session.get(self.url)
+        self.response = self.session.get(self.url, timeout= 1.0)
         self.final_url = self.response.url
         if self.response.status_code != requests.codes.ok:
             self.response.raise_for_status()
