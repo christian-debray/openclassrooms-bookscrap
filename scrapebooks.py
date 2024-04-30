@@ -18,32 +18,23 @@ from scrapeindex import ScrapeIndex
 def create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="scrapbooks",
-        usage="scrapbooks [options] [url_to_scrape]",
-        description="scraps book data found on given URL.")
+        usage="scrapbooks [options] scrape_url",
+        description="Scrap book catalog data found at the given URL.")
     parser.add_argument(
         "scrape_url",
-        nargs='?',
-        default= "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
-        help= "URL to scrape. see mode option as for how the URL will be interpreted."
+        help= "URL to scrape. May be a single product page or a category page, or the URL of the full catalog index."
         )
     parser.add_argument(
         "-o", "--output",
         required=False,
         default="",
-        help= "specifies path to the output file."
-        )
-    parser.add_argument(
-        "--mode",
-        "-m",
-        choices=['single', 'category', 'all'],
-        default="single",
-        help="scrape mode: single page, all pages of the same category, or all pages from the same base URL."
+        help= "Specifies the path to the output file. If the output file already exists, marks the urls found in the file as scraped to avoid duplicate rows. Otherwise, or if omitted, generates a filename based on the scrape_url and the current timestamp."
         )
     parser.add_argument(
         "--file",
         "-f",
         default="",
-        help="for debugging purposes: sets a local HTML file as input, handled as a single scraping. This setting will ignore all others except ouptut."
+        help="for debugging purposes: sets a local HTML file as input, handled as a single scraping. This setting will ignore all others and output the data to stdout."
     )
 
     return parser
@@ -68,14 +59,32 @@ if __name__ == "__main__":
     #
     parser = create_arg_parser()
     args = parser.parse_args()
+
+    #
+    # set the CSV output file
+    #
+    output_base_dir = '.'
+    csv_output_file = ''
+    if args.output:
+        if os.path.exists(args.output):
+            if os.path.isdir(args.output):
+                output_base_dir = args.output
+            else:
+                output_base_dir = os.path.dirname(args.output)
+                csv_output_file = args.ouptut
+        else:
+            csv_output_file = args.output
+
     if not args.file:
         scrape_url = args.scrape_url
         input_file = ''
-        csv_output_file = args.output or ("./data/" + gen_output_file_name(scrape_url, '.csv'))
+        if not csv_output_file:
+            csv_output_file = os.path.join(output_base_dir, gen_output_file_name(scrape_url, '.csv'))
     else:
         scrape_url = ''
         input_file = args.file
-        csv_output_file = args.output or ("./data/" + append_timestamp(os.path.basename(args.file)) + ".csv")
+        if not csv_output_file:
+            csv_output_file = os.path.join(output_base_dir, append_timestamp(os.path.basename(args.file)) + ".csv")
 
     if input_file:
         # debugging with a local file...
@@ -93,7 +102,7 @@ if __name__ == "__main__":
     urls_index = ScrapeIndex()
 
     # if the output file already exists, add all referenced URLs to the set, and mark them as parsed.
-    if os.path.exists(csv_output_file) and os.stat(csv_output_file).st_size > 0:
+    if os.path.exists(csv_output_file) and os.path.isfile(csv_output_file) and os.stat(csv_output_file).st_size > 0:
         with open(csv_output_file, "r") as f:
             csv_reader = csv.DictReader(f)
             for row in csv_reader:
@@ -104,13 +113,13 @@ if __name__ == "__main__":
     #
     scrape_url = re.sub(r'/(index.[a-z]{2,4})?$', '', scrape_url) + '/'
     if scrape_url in ['https://books.toscrape.com/catalogue/category/books_1/', 'https://books.toscrape.com/']:
-        print("scrape the entire catalog")
+        print(f"scrape the entire catalog, export to {csv_output_file}")
         urls_index.load_generator_from_url(scrape_url)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
-        print("scrape a category")
+        print(f"scrape a category, export to {csv_output_file}")
         urls_index.load_generator_from_url(scrape_url)
     else:
-        print("scrape a single page")
+        print(f"scrape a single page, export to {csv_output_file}")
         urls_index.load_generator_from_list([scrape_url])
 
     data_source = RemoteDataSource()
@@ -129,4 +138,5 @@ if __name__ == "__main__":
             else:
                 print("Invalid book data, skip record.")
         time.sleep(2)
+    
     print("done.")
