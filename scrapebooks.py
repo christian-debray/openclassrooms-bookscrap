@@ -14,6 +14,7 @@ from remotedatasource import RemoteDataSource
 from bookdatareader import BookDataReader
 from bookdatawriter import BookDataWriter
 from scrapeindex import ScrapeIndex
+from scraper import Scraper
 
 def create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -71,7 +72,7 @@ if __name__ == "__main__":
                 output_base_dir = args.output
             else:
                 output_base_dir = os.path.dirname(args.output)
-                csv_output_file = args.ouptut
+                csv_output_file = args.output
         else:
             csv_output_file = args.output
 
@@ -99,44 +100,20 @@ if __name__ == "__main__":
         # woops...
         exit("Missing data source. Please specify URL to scrape or input HTML file.")
 
-    urls_index = ScrapeIndex()
+    scraper = Scraper()
 
-    # if the output file already exists, add all referenced URLs to the set, and mark them as parsed.
-    if os.path.exists(csv_output_file) and os.path.isfile(csv_output_file) and os.stat(csv_output_file).st_size > 0:
-        with open(csv_output_file, "r") as f:
-            csv_reader = csv.DictReader(f)
-            for row in csv_reader:
-                if url := row['product_page_url']:
-                    urls_index.mark_url(url)
     #
-    # Guess the page type from the path:
+    # Guess the scraping type from the path: entire catalog, category or single page
     #
     scrape_url = re.sub(r'/(index.[a-z]{2,4})?$', '', scrape_url) + '/'
     if scrape_url in ['https://books.toscrape.com/catalogue/category/books_1/', 'https://books.toscrape.com/']:
-        print(f"scrape the entire catalog, export to {csv_output_file}")
-        urls_index.load_generator_from_url(scrape_url)
+        print(f"scrape the entire catalog, export to {output_base_dir}")
+        scraper.scrape_all_categories(scrape_url, output_base_dir)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
         print(f"scrape a category, export to {csv_output_file}")
-        urls_index.load_generator_from_url(scrape_url)
+        scraper.scrape_category(scrape_url, csv_output_file)
     else:
         print(f"scrape a single page, export to {csv_output_file}")
-        urls_index.load_generator_from_list([scrape_url])
-
-    data_source = RemoteDataSource()
-    reader = BookDataReader()
-    writer = BookDataWriter(csv_output_file)
-
-    for url in urls_index.list_urls_to_scrape():
-        print(f"scrape {url}")
-        data_source.set_source(url)
-        book_html = data_source.read_text()
-        if book := reader.read_from_html(book_html):
-            book.product_page_url = url
-            if (book.is_valid()):
-                if success := writer.append_data(book):
-                    print(f"exported book data to csv file")
-            else:
-                print("Invalid book data, skip record.")
-        time.sleep(2)
+        scraper.scrape_book(scrape_url, BookDataWriter(csv_output_file))
     
     print("done.")

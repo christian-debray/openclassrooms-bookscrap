@@ -4,16 +4,18 @@ bookscraper package
 @author Christian Debray - christian.debray@gmail.com
 """
 import requests
+import time
 
 class RemoteDataSource:
     """
     wrap remote connection utility
     """
 
-    def __init__(self, url: str = None):
+    def __init__(self, url: str = None, requests_delay: int = 0):
         self.url:str
         self.response: requests.Response
         self.session: requests.Session = requests.session()
+        self.requests_delay = requests_delay
         if url:
             self.set_source(url)
 
@@ -22,6 +24,8 @@ class RemoteDataSource:
         Connects to a remote data source and stores the response.
         raises an HTTPError if connection error occured.
         """
+        if self.requests_delay > 0:
+            time.sleep(self.requests_delay)
         self.url = url
         self.response = self.session.get(self.url, timeout= 1.0)
         self.final_url = self.response.url
