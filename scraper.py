@@ -12,6 +12,8 @@ import os
 import csv
 import re
 import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 class Scraper:
     """
@@ -41,6 +43,7 @@ class Scraper:
         Appends book data to the output csv file if the url has not been scraped yet.
         """
         category_index = self._get_category_index(category_index_url)
+        logger.info(f"Scrape category {category_index.category_name} to {csv_output_file}")
         self._mark_scraped_urls_from_csv(csv_output_file, category_index)
         writer = BookDataWriter(csv_output_file)
 
@@ -51,16 +54,16 @@ class Scraper:
         """
         Scrape book data found on a product page, appends the result to the output file
         """
-        print(f"scrape {product_page_url}")
+        logger.info(f"scrape book: {product_page_url}")
         self._data_source.set_source(product_page_url)
         book_html = self._data_source.read_text()
         if book := self._book_data_reader.read_from_html(book_html, product_page_url):
             book.product_page_url = product_page_url
             if (book.is_valid()):
                 if success := writer.append_data(book):
-                    print(f"exported book data to csv file")
+                    logger.info(f"Exported book data to csv file")
             else:
-                print("Invalid book data, skip record.")
+                logger.info("Invalid book data, skip record.")
 
     def _get_category_index(self, category_index_url) -> CategoryIndex:
         """

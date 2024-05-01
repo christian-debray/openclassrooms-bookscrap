@@ -8,6 +8,8 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from typing import Generator
 from collections.abc import Generator
+import logging
+logger = logging.getLogger(__name__)
 
 class ScrapeIndex:
     """
@@ -86,7 +88,7 @@ class ScrapeIndex:
                 url_list = [urllib.parse.urljoin(next_index_url, link.attrs.get('href', '')) for link in items]
             else:
                 url_list = []
-            print("Found {0} links".format(len(url_list)))
+            logger.info("Found {0} links".format(len(url_list)))
             if next_link := index_soup.css.select_one('.pager .next > a'):
                 next_index_url = urllib.parse.urljoin(next_index_url, next_link.attrs['href'])
             else:
@@ -94,6 +96,6 @@ class ScrapeIndex:
             for url in url_list:
                 yield url
             if next_index_url:
-                print(f"Proceed to next page: {next_index_url}")
+                logger.info(f"Proceed to next page: {next_index_url}")
             else:
-                print("Reached the end of index")
+                logger.info("Reached the end of index")

@@ -15,6 +15,8 @@ from bookdatareader import BookDataReader
 from bookdatawriter import BookDataWriter
 from scrapeindex import ScrapeIndex
 from scraper import Scraper
+import logging
+logger = logging.getLogger(__name__)
 
 def create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -87,9 +89,14 @@ if __name__ == "__main__":
         if not csv_output_file:
             csv_output_file = os.path.join(output_base_dir, append_timestamp(os.path.basename(args.file)) + ".csv")
 
+    #
+    # configure logger
+    #
+    logging.basicConfig(level=logging.INFO)
+
     if input_file:
         # debugging with a local file...
-        print(f"debugging with local file {input_file}:")
+        logger.info(f"debugging with local file {input_file}:")
         with open(input_file) as f:
             book_html = f.read()
         reader = BookDataReader()
@@ -107,13 +114,13 @@ if __name__ == "__main__":
     #
     scrape_url = re.sub(r'/(index.[a-z]{2,4})?$', '', scrape_url) + '/'
     if scrape_url in ['https://books.toscrape.com/catalogue/category/books_1/', 'https://books.toscrape.com/']:
-        print(f"scrape the entire catalog, export to {output_base_dir}")
+        logger.info(f"scrape the entire catalog, export to {output_base_dir}")
         scraper.scrape_all_categories(scrape_url, output_base_dir)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
-        print(f"scrape a category, export to {csv_output_file}")
+        logger.info(f"scrape a category, export to {csv_output_file}")
         scraper.scrape_category(scrape_url, csv_output_file)
     else:
-        print(f"scrape a single page, export to {csv_output_file}")
+        logger.info(f"scrape a single page, export to {csv_output_file}")
         scraper.scrape_book(scrape_url, BookDataWriter(csv_output_file))
     
-    print("done.")
+    logger.info("done.")

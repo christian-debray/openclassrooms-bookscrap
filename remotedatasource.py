@@ -6,6 +6,7 @@ bookscraper package
 import requests
 import time
 
+
 class RemoteDataSource:
     """
     wrap remote connection utility
