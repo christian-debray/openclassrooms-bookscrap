@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import re
 from bookdata import BookData
 from bookdatamapping import BookDataMapping as CSSMapping
+import urllib.parse
 
 class BookDataReader:
     """
@@ -17,7 +18,7 @@ class BookDataReader:
     def __init__(self):
         self._soup: BeautifulSoup
 
-    def read_from_html(self, html_str: str) -> BookData:
+    def read_from_html(self, html_str: str, book_url: str = "") -> BookData:
         markup: BeautifulSoup = BeautifulSoup(html_str, 'html.parser')
         self._soup = markup
         book = BookData()
@@ -52,7 +53,8 @@ class BookDataReader:
             book.review_rating = BookData.filter_review_rating(self._read_review_rating(review_rating_tag))
 
         if image_url_tag := markup.css.select_one(CSSMapping.image_url_selector):
-            book.image_url = image_url_tag.attrs.get('src', None)
+            if image_url := image_url_tag.attrs.get('src', None):
+                book.image_url = image_url if (len(book_url) == 0) else urllib.parse.urljoin(book_url, image_url)
         return book
 
     def _normalize_string(self, in_str: str) -> str:
