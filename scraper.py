@@ -25,9 +25,11 @@ class Scraper:
     SCRAPE_CATEGORY = "scrape_category"
     SCRAPE_PRODUCT = "scrape_product"
 
-    def __init__(self, mode: str = "scrape_content", custom_url_handler: Callable = None, requests_delay: float = 2.0, timeout: tuple[float, float] = (3.05, 7.0)):
+    def __init__(self, output_dir: str,  mode: str = "scrape_content", custom_url_handler: Callable = None, requests_delay: float = 2.0, timeout: tuple[float, float] = (3.05, 7.0)):
         """
         Initialize the scraper.
+
+        output_dir -- path to the directory where the csv files should be stored
 
         mode -- If mode is "scrape_content" (default), scrape book contents to an object and export to CSV.
         Otherwise, just list URLs to scrape.
@@ -46,9 +48,10 @@ class Scraper:
         self._scrape_contents: bool = (mode == "scrape_content")
         self._custom_url_handler = custom_url_handler
         self._errors = 0
+        self._output_path: str = output_dir
     
     @max_attempts_decorator(max_attempts = 2)
-    def scrape_all_categories(self, url: str, output_path: str) -> bool:
+    def scrape_all_categories(self, url: str) -> bool:
         """
         Scrape all categories. Output_path should be a valid path to a writable directory.
         Returns True on success, or False if errors occured.
@@ -59,7 +62,7 @@ class Scraper:
 
         self._handle_url_hook(url, self.SCRAPE_ALL)
         for cat_url, cat_name in home_index.list_categories().items():
-            csv_output_file = os.path.join(output_path, self._gen_csv_filename(cat_name))
+            csv_output_file = os.path.join(self._output_path, self._gen_csv_filename(cat_name))
             try:
                 self.scrape_category(cat_url, csv_output_file)
             except Exception as e:
@@ -78,6 +81,8 @@ class Scraper:
         Returns True on success, False if errors occured.
         """
         category_index = self._get_category_index(category_index_url)
+        if not csv_output_file:
+            csv_output_file = os.path.join(self._output_path, self._gen_csv_filename(category_index.category_name))
         logger.info(f"Scrape category {category_index.category_name} to {csv_output_file}")
         self._handle_url_hook(category_index_url, self.SCRAPE_CATEGORY)
         self._mark_scraped_urls_from_csv(csv_output_file, category_index)

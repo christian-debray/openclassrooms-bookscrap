@@ -216,7 +216,8 @@ if __name__ == "__main__":
 
     scraper_options = {
         'timeout': (3.5, 7),
-        'requests_delay': 1.5
+        'requests_delay': 1.5,
+        'output_dir': output_base_dir
     }
 
     if args.nocontent:
@@ -232,7 +233,7 @@ if __name__ == "__main__":
     scrape_url = re.sub(r'/(index.[a-z]{2,4})?$', '', scrape_url) + '/'
     if scrape_url in ['https://books.toscrape.com/catalogue/category/books_1/', 'https://books.toscrape.com/']:
         logger.info(f"Scrape the entire catalog, export to {output_base_dir}")
-        scraper.scrape_all_categories(scrape_url, output_base_dir)
+        scraper.scrape_all_categories(scrape_url)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
         logger.info(f"Scrape a category, export to {csv_output_file}")
         scraper.scrape_category(scrape_url, csv_output_file)
