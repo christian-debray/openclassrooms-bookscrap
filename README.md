@@ -16,6 +16,30 @@ once all packages and dependencies have been installed in a vritual environment:
 $ python scrapbooks.py [options] [url_to_scrape]
 ```
 
+### Some examples:
+
+**--no-content option**
+
+Test url listing when scraping all categories, output the list to data/test_urls.txt, log info messages and errors to data/test_logs.log.
+In this case, no CSV will be written, but the script will output the filenames that would have been written in normal mode.
+```
+python scrapebooks.py --no-content -l data/test_logs.log -v -d data/test -T "https://books.toscrape.com/" > data/test_urls.txt
+```
+
+**normal usage: scrap a single category**
+
+On may 2nd, 2024, this would produce no output, scrape book data of category "mystery" to directory data/scrape_cat_2024-05-02, and write INFO level logs to data/scraping_logs.log
+
+```
+python scrapebooks.py -l data/scraping_logs.log -v -T -d data/scrape_cat "https://books.toscrape.com/catalogue/category/books/mystery_3/"
+```
+
+**normal usage: scrap entire catalog**
+
+```
+python scrapebooks.py -l data/scraping_logs.log -q -T -d data/scraping "https://books.toscrape.com"
+```
+
 ### Command line arguments:
 ```
 usage: scrapbooks [options] scrape_url
