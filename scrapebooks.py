@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     # create output directory if needed
     if not os.path.exists(output_base_dir):
-        os.makedirs(output_base_dir)
+        os.makedirs(output_base_dir, mode=0o777)
 
     # scrape_url argument
     if not args.file:
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         if not os.path.exists(args.logfile):
             logdir = os.path.dirname(args.logfile)
             if not os.path.exists(logdir):
-                os.makedirs(logdir)
+                os.makedirs(logdir, mode=0o777)
             elif not os.access(logdir, os.W_OK):
                 raise Exception("Can't write to logfile: directory is not accessible.")
         elif not os.path.isfile(args.logfile) or not os.access(args.logfile, os.W_OK):
