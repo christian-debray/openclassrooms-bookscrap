@@ -7,13 +7,9 @@ import argparse
 import urllib.parse
 import datetime
 import os
-import csv
 import re
-import time
-from remotedatasource import RemoteDataSource
 from bookdatareader import BookDataReader
 from bookdatawriter import BookDataWriter
-from scrapeindex import ScrapeIndex
 from scraper import Scraper
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +35,40 @@ def create_arg_parser() -> argparse.ArgumentParser:
         default="",
         help="for debugging purposes: sets a local HTML file as input, handled as a single scraping. This setting will ignore all others and output the data to stdout."
     )
-
+    parser.add_argument(
+        "--verbosity",
+        choices= [0, 1, 2],
+        type= int,
+        default = 0,
+        help="verbosity level. 0 = errors only, 1 = info, 2 = debug. 0 is the default."
+    )
+    parser.add_argument(
+        "-v",
+        dest="verbosity",
+        action="store_const",
+        const=1,
+        help="Sets verbosity level to 1 (info)"
+    )
+    parser.add_argument(
+        "-q",
+        dest="verbosity",
+        action="store_const",
+        const=0,
+        help="Sets verbosity level to 0 (errors only)"
+    )
+    parser.add_argument(
+        "-D",
+        dest="verbosity",
+        action="store_const",
+        const=2,
+        help="Sets verbosity level to 2 (debug)"
+    )
+    parser.add_argument(
+        "-l",
+        "--logfile",
+        default="",
+        help="Output logs to the specified logfile"
+    )
     return parser
 
 def gen_output_file_name(scrape_url: str, extension: str= "csv") -> str:
@@ -63,7 +92,7 @@ if __name__ == "__main__":
     parser = create_arg_parser()
     args = parser.parse_args()
 
-    #
+        #
     # set the CSV output file
     #
     output_base_dir = '.'
@@ -92,7 +121,26 @@ if __name__ == "__main__":
     #
     # configure logger
     #
-    logging.basicConfig(level=logging.INFO)
+    logger_config = {
+        'level': logging.ERROR
+    }
+    if args.logfile:
+        if not os.path.exists(args.logfile):
+            logdir = os.path.dirname(args.logfile)
+            if not os.path.exists(logdir):
+                os.makedirs(logdir)
+            elif not os.access(logdir, os.W_OK):
+                raise Exception("Can't write to logfile: directory is not accessible.")
+        elif not os.path.isfile(args.logfile) or not os.access(args.logfile, os.W_OK):
+            raise Exception("Can't write to logfile: Logfile is not an accessible or writable file.")
+        logger_config['filename'] = args.logfile
+    if args.verbosity > 0:
+        lvls = {
+            1: logging.INFO,
+            2: logging.DEBUG
+        }
+        logger_config['level'] = lvls.get(args.verbosity, logging.NOTSET)
+    logging.basicConfig(**logger_config)
 
     if input_file:
         # debugging with a local file...
@@ -105,7 +153,7 @@ if __name__ == "__main__":
         exit()
     elif len(scrape_url) == 0:
         # woops...
-        exit("Missing data source. Please specify URL to scrape or input HTML file.")
+        raise Exception("Missing data source. Please specify URL to scrape or input HTML file.")
 
     scraper = Scraper()
 
@@ -114,13 +162,13 @@ if __name__ == "__main__":
     #
     scrape_url = re.sub(r'/(index.[a-z]{2,4})?$', '', scrape_url) + '/'
     if scrape_url in ['https://books.toscrape.com/catalogue/category/books_1/', 'https://books.toscrape.com/']:
-        logger.info(f"scrape the entire catalog, export to {output_base_dir}")
+        logger.info(f"Scrape the entire catalog, export to {output_base_dir}")
         scraper.scrape_all_categories(scrape_url, output_base_dir)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
-        logger.info(f"scrape a category, export to {csv_output_file}")
+        logger.info(f"Scrape a category, export to {csv_output_file}")
         scraper.scrape_category(scrape_url, csv_output_file)
     else:
-        logger.info(f"scrape a single page, export to {csv_output_file}")
+        logger.info(f"Scrape a single page, export to {csv_output_file}")
         scraper.scrape_book(scrape_url, BookDataWriter(csv_output_file))
     
-    logger.info("done.")
+    logger.info("Done.")

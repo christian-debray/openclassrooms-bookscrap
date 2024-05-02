@@ -88,7 +88,7 @@ class ScrapeIndex:
                 url_list = [urllib.parse.urljoin(next_index_url, link.attrs.get('href', '')) for link in items]
             else:
                 url_list = []
-            logger.info("Found {0} links".format(len(url_list)))
+            logger.debug("Found {0} links".format(len(url_list)))
             if next_link := index_soup.css.select_one('.pager .next > a'):
                 next_index_url = urllib.parse.urljoin(next_index_url, next_link.attrs['href'])
             else:
@@ -96,6 +96,6 @@ class ScrapeIndex:
             for url in url_list:
                 yield url
             if next_index_url:
-                logger.info(f"Proceed to next page: {next_index_url}")
+                logger.debug(f"Proceed to next page: {next_index_url}")
             else:
-                logger.info("Reached the end of index")
+                logger.debug("Reached the end of index")

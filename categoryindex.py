@@ -26,7 +26,6 @@ class CategoryIndex(ScrapeIndex):
         category_soup = BeautifulSoup(category_html, 'html.parser')
         if cat_title_tag := category_soup.css.select_one('.page-header > h1'):
             self.category_name = " ".join(cat_title_tag.stripped_strings)
-            return True
     
     def list_categories(self):
         """

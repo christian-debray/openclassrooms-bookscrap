@@ -54,16 +54,16 @@ class Scraper:
         """
         Scrape book data found on a product page, appends the result to the output file
         """
-        logger.info(f"scrape book: {product_page_url}")
+        logger.debug(f"Scrape book: {product_page_url}")
         self._data_source.set_source(product_page_url)
         book_html = self._data_source.read_text()
         if book := self._book_data_reader.read_from_html(book_html, product_page_url):
             book.product_page_url = product_page_url
             if (book.is_valid()):
                 if success := writer.append_data(book):
-                    logger.info(f"Exported book data to csv file")
+                    logger.debug(f"Exported book data to csv file")
             else:
-                logger.info("Invalid book data, skip record.")
+                logger.debug("Invalid book data, skip record.")
 
     def _get_category_index(self, category_index_url) -> CategoryIndex:
         """
