@@ -5,6 +5,7 @@ bookscraper package
 """
 from categoryindex import CategoryIndex
 from scrapeindex import ScrapeIndex
+from bookdata import BookData
 from bookdatawriter import BookDataWriter
 from bookdatareader import BookDataReader
 from remotedatasource import RemoteDataSource, max_attempts_decorator
@@ -24,6 +25,7 @@ class Scraper:
     SCRAPE_ALL = "scrape_all"
     SCRAPE_CATEGORY = "scrape_category"
     SCRAPE_PRODUCT = "scrape_product"
+    SCRAPE_IMAGE = "scrape_image"
 
     def __init__(self, output_dir: str,  mode: str = "scrape_content", custom_url_handler: Callable = None, requests_delay: float = 2.0, timeout: tuple[float, float] = (3.05, 7.0)):
         """
@@ -87,11 +89,12 @@ class Scraper:
         self._handle_url_hook(category_index_url, self.SCRAPE_CATEGORY)
         self._mark_scraped_urls_from_csv(csv_output_file, category_index)
         writer = BookDataWriter(csv_output_file)
+        img_dir_path = os.path.join(self._output_path, 'images', self._gen_filename(category_index.category_name))
 
         cat_errors = 0
         for url in category_index.list_urls_to_scrape():
             try:
-                if not self.scrape_book(url, writer):
+                if not self.scrape_book(url, writer, img_dir_path):
                     cat_errors += 1
             except Exception as e:
                 e_type = type(e).__name__
@@ -102,7 +105,7 @@ class Scraper:
 
 
     @max_attempts_decorator(max_attempts = 2)
-    def scrape_book(self, product_page_url: str, writer: BookDataWriter):
+    def scrape_book(self, product_page_url: str, writer: BookDataWriter, img_dir_path: str = None):
         """
         Scrape book data found on a product page, appends the result to the output file.
         Returns True if successful.
@@ -120,6 +123,10 @@ class Scraper:
                 if writer.append_data(book):
                     success = True
                     logger.debug(f"Exported book data to csv file")
+                    # download the image as well
+                    if not img_dir_path:
+                        img_dir_path = os.path.join(self._output_path, 'images')
+                    self._fetch_book_image(book, img_dir_path)
             else:
                 logger.warning(f"Scraping produced invalid book data at {product_page_url}, skip record.")
         return success
@@ -136,7 +143,15 @@ class Scraper:
         """
         Returns a valid csv basename with a .csv extension. Spaces and slashes are replaced by an underscore character ('_').
         """
-        return re.sub(r'[\s/]+', '_', name.strip(" /")) + '.csv'
+        return self._gen_filename(name, '.csv')
+
+    def _gen_filename(self, name: str, suffix: str = "") -> str:
+        """
+        Returns a valid basename generated from the first parameter.
+        Successive Spaces and slashes are replaced by a single underscore character ('_').
+        Append an optional file extension
+        """
+        return re.sub(r'[\s/]+', '_', name.strip(" /")) + suffix
 
     def _mark_scraped_urls_from_csv(self, csv_file: str, urls_index: ScrapeIndex):
         """
@@ -156,3 +171,25 @@ class Scraper:
         """
         if isinstance(self._custom_url_handler, Callable):
             self._custom_url_handler(url= url, scrape_type= scrape_type)
+
+    @max_attempts_decorator(2)
+    def _fetch_book_image(self, book: BookData, image_dir: str) -> str:
+        """
+        Fetch the image file from an URL and store it to image directory.
+        The local file will be named after the book title, with the appropriate file extension.
+        Returns the local image filename on success, None on failure.
+        """
+        if book.image_url:
+            logger.debug(f"Downloading book image from {book.image_url}")
+            self._handle_url_hook(book.image_url, self.SCRAPE_IMAGE)
+            if img_data := self._data_source.fetch_binary(book.image_url):
+                if not os.path.exists(image_dir):
+                    os.makedirs(image_dir, mode = 0o777)
+                mime_type, mime_subtype = self._data_source.mime_type()
+                if mime_subtype.lower() in ['jpeg', 'jpg', 'png', 'gif']:
+                    img_file = os.path.join(image_dir, self._gen_filename(book.universal_product_code, f".{mime_subtype.lower()}"))
+                    logger.debug(f"write image to {img_file}")
+                    with open(img_file, "wb") as f:
+                        f.write(img_data)
+                        return img_file
+        return None

@@ -7,6 +7,7 @@ import requests
 import time
 import functools
 import logging
+import re
 logger = logging.getLogger(__name__)
 
 def max_attempts_decorator(max_attempts):
@@ -71,7 +72,28 @@ class RemoteDataSource:
         """
         if url:
             self.set_source(url)
+        #
+        # TODO: handle encoding
+        #
+        return self.response.text
+
+    def fetch_binary(self, url: str = None) -> bytes:
+        """
+        fetches binary content
+        """
+        if url:
+            self.set_source(url)
         return self.response.content
+
+    def mime_type(self) -> tuple[str, str]:
+        """
+        Returns the content Type of the response as a string as a tuple: (type, subtype)
+        see https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types#important_mime_types_for_web_developers
+        """
+        if self.response and self.response.status_code == requests.codes.ok:
+            if type_match := re.match(r'(image|text)/([a-z\+]+)', self.response.headers['content-type']):
+                return (type_match.group(1), type_match.group(2))
+        return None
 
 if __name__ == "__main__":
     ds = RemoteDataSource('https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html')
@@ -80,6 +102,11 @@ if __name__ == "__main__":
     content = ds.read_text()
     assert(len(content) > 0)
     print("extracted {0} characters. First 100:\n{1}\n{2}".format(len(content), content[:100], '(...)' if len(content) > 100 else ''))
+
+    print(ds.mime_type())
+
+    ds.set_source("https://books.toscrape.com/media/cache/fe/72/fe72f0532301ec28892ae79a629a293c.jpg")
+    print(ds.mime_type())
 
     err: Exception = None
     try:
