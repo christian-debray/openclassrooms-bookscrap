@@ -13,6 +13,7 @@ import csv
 import re
 import datetime
 import logging
+from collections.abc import Callable
 logger = logging.getLogger(__name__)
 
 class Scraper:
@@ -20,18 +21,34 @@ class Scraper:
     Main class
     """
 
-    def __init__(self):
+    SCRAPE_ALL = "scrape_all"
+    SCRAPE_CATEGORY = "scrape_category"
+    SCRAPE_PRODUCT = "scrape_product"
+
+    def __init__(self, mode: str = "scrape_content", custom_url_handler: Callable = None):
+        """
+        Initialize the scraper.
+
+        If mode is "scrape_content" (default), scrape book contents to an object and export to CSV.
+        Otherwise, just list URLs to scrape.
+
+        An optional handler can be set to add further handling of scraped urls.
+        The handler will be called with two keywords parameters: scrape_url_handler(**{url: str, scrape_type: str})
+        """
         self._category_indexes = {}
         # limit request speed to preserve bandwidth on the remote server:
         self._requests_delay = 2.0
         self._book_data_reader = BookDataReader()
         self._data_source = RemoteDataSource(requests_delay= self._requests_delay)
+        self._scrape_contents: bool = (mode == "scrape_content")
+        self._custom_url_handler = custom_url_handler
     
     def scrape_all_categories(self, url: str, output_path: str):
         """
         Scrape all categories. Output_path should be a valid path to a writable directory.
         """
         home_index = CategoryIndex(url)
+        self._handle_url_hook(url, self.SCRAPE_ALL)
         for cat_url, cat_name in home_index.list_categories().items():
             csv_output_file = os.path.join(output_path, self._gen_csv_filename(cat_name))
             self.scrape_category(cat_url, csv_output_file)
@@ -44,6 +61,7 @@ class Scraper:
         """
         category_index = self._get_category_index(category_index_url)
         logger.info(f"Scrape category {category_index.category_name} to {csv_output_file}")
+        self._handle_url_hook(category_index_url, self.SCRAPE_CATEGORY)
         self._mark_scraped_urls_from_csv(csv_output_file, category_index)
         writer = BookDataWriter(csv_output_file)
 
@@ -55,6 +73,9 @@ class Scraper:
         Scrape book data found on a product page, appends the result to the output file
         """
         logger.debug(f"Scrape book: {product_page_url}")
+        self._handle_url_hook(product_page_url, self.SCRAPE_CATEGORY)
+        if not self._scrape_contents:
+            return
         self._data_source.set_source(product_page_url)
         book_html = self._data_source.read_text()
         if book := self._book_data_reader.read_from_html(book_html, product_page_url):
@@ -90,3 +111,10 @@ class Scraper:
                 for row in csv_reader:
                     if url := row['product_page_url']:
                         urls_index.mark_url(url)
+    
+    def _handle_url_hook(self, url: str, scrape_type: str):
+        """
+        call a custom handler, if set
+        """
+        if isinstance(self._custom_url_handler, Callable):
+            self._custom_url_handler(url= url, scrape_type= scrape_type)

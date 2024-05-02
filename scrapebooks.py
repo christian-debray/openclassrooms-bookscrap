@@ -18,7 +18,9 @@ def create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="scrapbooks",
         usage="scrapbooks [options] scrape_url",
-        description="Scrap book catalog data found at the given URL.")
+        description="Scrap book catalog data found at the given URL.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument(
         "scrape_url",
         help= "URL to scrape. May be a single product page or a category page, or the URL of the full catalog index."
@@ -34,6 +36,35 @@ def create_arg_parser() -> argparse.ArgumentParser:
         "-f",
         default="",
         help="for debugging purposes: sets a local HTML file as input, handled as a single scraping. This setting will ignore all others and output the data to stdout."
+    )
+    parser.add_argument(
+        "--outputdir",
+        "-d",
+        help="""
+Explicitely sets the output directory.
+Can be any path, and may contain format codes to add a date or timestamp.
+
+If set, the argument set with --output option will be interpreted as a
+path relative to --outputdir.
+
+Supports Python's date and time format codes.
+(see https://docs.python.org/3/library/datetime.html#format-codes):
+
+    %%Y current year with century as a decimal number
+    %%m current month as a zero-padded decimal number
+    %%d current day of the month as a zero-padded decimal number
+    etc.
+
+    ex.: scrapebook.py -d "path/to/outdir/scrap-%%Y-%%m-%%d
+
+"""
+    )
+    parser.add_argument(
+        "-T",
+        "--append-date",
+        action="store_true",
+        default=False,
+        help="Appends the current date to the ouptut directory. Combine this with -d."
     )
     parser.add_argument(
         "--verbosity",
@@ -69,6 +100,13 @@ def create_arg_parser() -> argparse.ArgumentParser:
         default="",
         help="Output logs to the specified logfile"
     )
+    parser.add_argument(
+        "--no-content",
+        dest="nocontent",
+        action="store_true",
+        default=False,
+        help="Don't scrape product contents, just extract the category and product URLs. Usually set for testing/debugging purposes."
+    )
     return parser
 
 def gen_output_file_name(scrape_url: str, extension: str= "csv") -> str:
@@ -92,10 +130,22 @@ if __name__ == "__main__":
     parser = create_arg_parser()
     args = parser.parse_args()
 
-        #
-    # set the CSV output file
     #
+    # set the CSV output parameters
+    #
+
+    # Set the ouptut directory
+
+    # --outputdir option
+    now = datetime.datetime.now(datetime.UTC)
     output_base_dir = '.'
+    if args.outputdir:
+        if str(args.outputdir).find("%") > 0:
+            output_base_dir = now.strftime(args.outputdir)
+        else:
+            output_base_dir = args.outputdir
+
+    # --output option
     csv_output_file = ''
     if args.output:
         if os.path.exists(args.output):
@@ -105,13 +155,22 @@ if __name__ == "__main__":
                 output_base_dir = os.path.dirname(args.output)
                 csv_output_file = args.output
         else:
+            output_base_dir = os.path.dirname(args.output)
             csv_output_file = args.output
 
+    # --apend_date
+    if len(output_base_dir) > 0 and output_base_dir != '.':
+        if args.append_date:
+            output_base_dir += now.strftime("_%Y-%m-%d")
+
+    # create output directory if needed
+    if not os.path.exists(output_base_dir):
+        os.makedirs(output_base_dir)
+
+    # scrape_url argument
     if not args.file:
         scrape_url = args.scrape_url
         input_file = ''
-        if not csv_output_file:
-            csv_output_file = os.path.join(output_base_dir, gen_output_file_name(scrape_url, '.csv'))
     else:
         scrape_url = ''
         input_file = args.file
@@ -155,7 +214,14 @@ if __name__ == "__main__":
         # woops...
         raise Exception("Missing data source. Please specify URL to scrape or input HTML file.")
 
-    scraper = Scraper()
+    scraper_options = {}
+
+    if args.nocontent:
+        def print_scraped_url(url: str = '', scrape_type: str = ''):
+            print(f"{scrape_type}: {url}")
+        scraper_options['mode'] = "scrape_urls"
+        scraper_options['custom_url_handler'] = print_scraped_url
+    scraper = Scraper(**scraper_options)
 
     #
     # Guess the scraping type from the path: entire catalog, category or single page
@@ -168,6 +234,9 @@ if __name__ == "__main__":
         logger.info(f"Scrape a category, export to {csv_output_file}")
         scraper.scrape_category(scrape_url, csv_output_file)
     else:
+        # we need an output file...
+        if not csv_output_file:
+            csv_output_file = os.path.join(output_base_dir, gen_output_file_name(scrape_url, '.csv'))
         logger.info(f"Scrape a single page, export to {csv_output_file}")
         scraper.scrape_book(scrape_url, BookDataWriter(csv_output_file))
     
