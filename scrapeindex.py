@@ -8,6 +8,7 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from typing import Generator
 from collections.abc import Generator
+from scraping_generators import AbstractScrapingGenerator
 import logging
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,8 @@ class ScrapeIndex:
     ```
     """
 
-    def __init__(self, data_src: RemoteDataSource = None):
+    def __init__(self, scraping_generator: AbstractScrapingGenerator, data_src: RemoteDataSource = None):
+        self.scraping_generator: AbstractScrapingGenerator = scraping_generator
         self.index_url = ''
         self._url_map: dict[str, str|bool] = {}
         self._url_generator = self.load_generator_from_list([])
@@ -84,15 +86,9 @@ class ScrapeIndex:
         while next_index_url:
             index_html = self.src.read_text(next_index_url)
             index_soup = BeautifulSoup(index_html, 'html.parser')
-            if items := index_soup.css.select('section ol.row > li article.product_pod h3 a'):
-                url_list = [urllib.parse.urljoin(next_index_url, link.attrs.get('href', '')) for link in items]
-            else:
-                url_list = []
+            url_list = self.scraping_generator.gen_product_urls_from_index(index_soup=index_soup, base_url=next_index_url)
             logger.debug("Found {0} links".format(len(url_list)))
-            if next_link := index_soup.css.select_one('.pager .next > a'):
-                next_index_url = urllib.parse.urljoin(next_index_url, next_link.attrs['href'])
-            else:
-                next_index_url = ''
+            next_index_url = self.scraping_generator.gen_index_next_page_url(index_soup= index_soup, base_url= next_index_url)
             for url in url_list:
                 yield url
             if next_index_url:

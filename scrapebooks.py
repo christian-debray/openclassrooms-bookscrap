@@ -11,6 +11,7 @@ import re
 from bookdatareader import BookDataReader
 from bookdatawriter import BookDataWriter
 from scraper import Scraper
+from books_to_scrape_generators import BooksToScrapeGenerator
 import logging
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,8 @@ if __name__ == "__main__":
     scraper_options = {
         'timeout': (3.5, 7),
         'requests_delay': 1.5,
-        'output_dir': output_base_dir
+        'output_dir': output_base_dir,
+        'scraping_generator': BooksToScrapeGenerator()
     }
 
     if args.nocontent:

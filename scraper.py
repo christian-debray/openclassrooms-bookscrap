@@ -14,6 +14,7 @@ import csv
 import re
 import logging
 from collections.abc import Callable
+from scraping_generators import AbstractScrapingGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +28,21 @@ class Scraper:
     SCRAPE_PRODUCT = "scrape_product"
     SCRAPE_IMAGE = "scrape_image"
 
-    def __init__(self, output_dir: str,  mode: str = "scrape_content", custom_url_handler: Callable = None, requests_delay: float = 2.0, timeout: tuple[float, float] = (3.05, 7.0)):
+    def __init__(
+            self,
+            output_dir: str, 
+            scraping_generator: AbstractScrapingGenerator,
+            mode: str = "scrape_content",
+            custom_url_handler: Callable = None,
+            requests_delay: float = 2.0,
+            timeout: tuple[float, float] = (3.05, 7.0)
+            ):
         """
         Initialize the scraper.
 
         output_dir -- path to the directory where the csv files should be stored
+
+        scraping_generator -- A scraping generator object that knows how to retrieve the data from the remote data source.
 
         mode -- If mode is "scrape_content" (default), scrape book contents to an object and export to CSV.
         Otherwise, just list URLs to scrape.
@@ -43,8 +54,9 @@ class Scraper:
 
         timeout -- set the connect and read timeout parameters (see https://requests.readthedocs.io/en/latest/user/advanced/#timeouts)
         """
+        self.scraping_generator = scraping_generator
         self._category_indexes = {}
-        self._book_data_reader = BookDataReader()
+        self._book_data_reader = BookDataReader(scraping_generator= self.scraping_generator)
         # limit request speed to preserve bandwidth on the remote server:
         self._data_source = RemoteDataSource(requests_delay= requests_delay, timeout= timeout)
         self._scrape_contents: bool = (mode == "scrape_content")
@@ -60,7 +72,7 @@ class Scraper:
         """
         # re-use the same data source to take advantage of sessions.
         # see https://requests.readthedocs.io/en/latest/user/advanced/
-        home_index = CategoryIndex(category_url = url, data_src= self._data_source)
+        home_index = CategoryIndex(category_url = url, data_src= self._data_source, scraping_generator= self.scraping_generator)
 
         self._handle_url_hook(url, self.SCRAPE_ALL)
         for cat_url, cat_name in home_index.list_categories().items():
@@ -136,7 +148,10 @@ class Scraper:
         Cache category indexes and find them by the category URL.
         """
         if category_index_url not in self._category_indexes:
-            self._category_indexes[category_index_url] = CategoryIndex(category_url= category_index_url, data_src= self._data_source)
+            self._category_indexes[category_index_url] = CategoryIndex(
+                category_url= category_index_url,
+                data_src= self._data_source,
+                scraping_generator= self.scraping_generator)
         return self._category_indexes[category_index_url]
 
     def _gen_csv_filename(self, name: str) -> str:
