@@ -214,7 +214,10 @@ if __name__ == "__main__":
         # woops...
         raise Exception("Missing data source. Please specify URL to scrape or input HTML file.")
 
-    scraper_options = {}
+    scraper_options = {
+        'timeout': (3.5, 7),
+        'requests_delay': 1.5
+    }
 
     if args.nocontent:
         def print_scraped_url(url: str = '', scrape_type: str = ''):

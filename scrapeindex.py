@@ -35,11 +35,11 @@ class ScrapeIndex:
     ```
     """
 
-    def __init__(self):
+    def __init__(self, data_src: RemoteDataSource = None):
         self.index_url = ''
         self._url_map: dict[str, str|bool] = {}
         self._url_generator = self.load_generator_from_list([])
-        self.src = RemoteDataSource()
+        self.src = data_src or RemoteDataSource()
 
     def mark_url(self, url, scraped: bool = True):
         """

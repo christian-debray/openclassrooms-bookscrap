@@ -5,13 +5,13 @@ bookscraper package
 """
 from scrapeindex import ScrapeIndex
 from bs4 import BeautifulSoup
-from remotedatasource import RemoteDataSource
 import re
 import urllib.parse
+from remotedatasource import RemoteDataSource
 
 class CategoryIndex(ScrapeIndex):
-    def __init__(self, category_url):
-        super().__init__()
+    def __init__(self, category_url: str, data_src: RemoteDataSource = None):
+        super().__init__(data_src=data_src)
         self.category_url: str = category_url
         self.category_name: str = ''
         self.total_books: int = 0
