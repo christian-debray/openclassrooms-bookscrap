@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 import re
 from remotedatasource import RemoteDataSource
 from scraping_generators import AbstractScrapingGenerator
+import logging
+logger = logging.getLogger(__name__)
 
 class CategoryIndex(ScrapeIndex):
     def __init__(self, category_url: str, scraping_generator: AbstractScrapingGenerator, data_src: RemoteDataSource = None):
@@ -25,7 +27,9 @@ class CategoryIndex(ScrapeIndex):
         Parse the category page and extract some useful infos
         """
         cat_data = self.scraping_generator.gen_category_info(self.category_soup)
-        self.category_name = cat_data.get('category_name', None)
+        self.category_name = cat_data.get('category_name', '')
+        self.total_books = cat_data.get('product_count', 0)
+        logger.debug(f"Loaded category '{self.category_name}' (total_books = {self.total_books}, category_url= {self.category_url})")
     
     def list_categories(self):
         """
@@ -38,6 +42,7 @@ class CategoryIndex(ScrapeIndex):
         return " ".join([s.strip() for s in re.split(r'[\t\n\r\f\v]+', stripped_strings)])
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     from books_to_scrape_generators import BooksToScrapeGenerator
     cat_idx = CategoryIndex(
         category_url= 'https://books.toscrape.com/catalogue/category/books/travel_2/index.html',

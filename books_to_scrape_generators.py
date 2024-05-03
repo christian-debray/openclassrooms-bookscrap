@@ -18,6 +18,12 @@ class BooksToScrapeGenerator(AbstractScrapingGenerator):
         cat_info = {'category_name': '', 'product_count': 0}
         if cat_title_tag := category_soup.css.select_one('.page-header > h1'):
             cat_info['category_name'] = " ".join(cat_title_tag.stripped_strings)
+        if cat_results := category_soup.css.select_one('.form-horizontal > strong:nth-child(2)'):
+            results_str = (" ".join(cat_results.stripped_strings)).strip() or "0"
+            try:
+                cat_info['product_count'] = int(results_str)
+            except Exception:
+                pass
         return cat_info
 
     def gen_categories_urls(self, base_url, category_soup: bs4.BeautifulSoup):
