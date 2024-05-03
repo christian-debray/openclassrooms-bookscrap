@@ -86,7 +86,7 @@ class Scraper:
         return self._errors == 0
 
     @max_attempts_decorator(max_attempts = 2)
-    def scrape_category(self, category_index_url: str, csv_output_file: str) -> bool:
+    def scrape_category(self, category_index_url: str, csv_output_file: str = None) -> bool:
         """
         Scrape all books found in a category. The first parameter should point to the category index page.
         csv_output_file should be a valid path to a csv output file.

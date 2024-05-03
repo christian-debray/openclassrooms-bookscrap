@@ -285,6 +285,7 @@ if __name__ == "__main__":
         logger.info(f"Scrape the entire catalog, export to {output_base_dir}")
         scraper.scrape_all_categories(scrape_url)
     elif re.match(r'^https://books.toscrape.com/catalogue/category/books/[a-zA-Z0-9\-_]+/$', scrape_url):
+        # we need an output file... but for categories the scraper will generate the filename, if needed.
         logger.info(f"Scrape a category, export to {csv_output_file}")
         scraper.scrape_category(scrape_url, csv_output_file)
     else:
