@@ -8,6 +8,8 @@ import urllib.parse
 import datetime
 import os
 import re
+from collections.abc import Callable
+import functools
 from bookdatareader import BookDataReader
 from bookdatawriter import BookDataWriter
 from scraper import Scraper
@@ -108,6 +110,19 @@ Supports Python's date and time format codes.
         default=False,
         help="Don't scrape product contents, just extract the category and product URLs. Usually set for testing/debugging purposes."
     )
+    parser.add_argument(
+        "--print-urls",
+        "-p",
+        action="store_true",
+        default=False,
+        help="Ouptut the scraped urls to stdout, using the format specified by the -F option"
+    )
+    parser.add_argument(
+        "--print_urls-format",
+        "-F",
+        default="{scrape_type}: {url}",
+        help="Specify the format to use when printing urls. Accepts two fields in brackets: '{scrape_type}' and '{url}'."
+    )
     return parser
 
 def gen_output_file_name(scrape_url: str, extension: str= "csv") -> str:
@@ -123,6 +138,31 @@ def gen_output_file_name(scrape_url: str, extension: str= "csv") -> str:
 def append_timestamp(in_str: str):
     now = datetime.datetime.now(datetime.timezone.utc)
     return in_str + '_' + now.strftime("%Y-%m-%d_%H-%M-%S")
+
+def print_scraped_url(url: str = '', scrape_type: str = '', o_format= "{scrape_type}: {url}"):
+    """
+    Outputs the scrape type and the scraped url in specified format to stdout.
+    Defaults to scrape_type: url.
+    Typically called as a custom_url_handler by the Scraper object.
+    See gen_scraped_url_formater for a convenient way to 'pre-compile' the ouptut format.
+    """
+    o_fields = {
+        'scrape_type': scrape_type,
+        'url': url
+    }
+    print(o_format.format(**o_fields))
+
+def gen_scraped_url_formater(formating_func: Callable, o_format: str= None) -> Callable:
+    """
+    Pre-generate a formating function to ouptut or handle scraped urls.
+    Used to set the custom_url_handler in a Scraper object.
+    """
+    @functools.wraps(formating_func)
+    def o_func(*args, **kwargs):
+        if o_format:
+            kwargs['o_format'] = o_format
+        return formating_func(*args, **kwargs)
+    return o_func
 
 if __name__ == "__main__":
     #
@@ -222,11 +262,19 @@ if __name__ == "__main__":
         'scraping_generator': BooksToScrapeGenerator()
     }
 
+    #
+    # skip book content and image scraping
+    #
     if args.nocontent:
-        def print_scraped_url(url: str = '', scrape_type: str = ''):
-            print(f"{scrape_type}: {url}")
         scraper_options['mode'] = "scrape_urls"
-        scraper_options['custom_url_handler'] = print_scraped_url
+
+    #
+    # output scraped urls
+    #
+    if args.print_urls:
+        print_urls_format = args.print_urls_format or "{url}"
+        scraper_options['custom_url_handler'] = gen_scraped_url_formater(print_scraped_url, print_urls_format)
+
     scraper = Scraper(**scraper_options)
 
     #

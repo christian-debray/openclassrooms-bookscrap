@@ -18,14 +18,6 @@ $ python scrapbooks.py [options] [url_to_scrape]
 
 ### Some examples:
 
-**--no-content option**
-
-Test url listing when scraping all categories, output the list to data/test_urls.txt, log info messages and errors to data/test_logs.log.
-In this case, no CSV will be written, but the script will output the filenames that would have been written in normal mode.
-```
-python scrapebooks.py --no-content -l data/test_logs.log -v -d data/test -T "https://books.toscrape.com/" > data/test_urls.txt
-```
-
 **normal usage: scrap a single category**
 
 On may 2nd, 2024, this would produce no output, scrape book data of category "mystery" to directory data/scrape_cat_2024-05-02, and write INFO level logs to data/scraping_logs.log
@@ -38,6 +30,21 @@ python scrapebooks.py -l data/scraping_logs.log -v -T -d data/scrape_cat "https:
 
 ```
 python scrapebooks.py -l data/scraping_logs.log -q -T -d data/scraping "https://books.toscrape.com"
+```
+
+**--no-content option**
+
+Test url listing when scraping all categories, output the list to data/test_urls.txt, log info messages and errors to data/test_logs.log.
+In this case, no CSV will be written, but the script will output the filenames that would have been written in normal mode.
+```
+python scrapebooks.py --no-content -l data/test_logs.log -v -d data/test -T "https://books.toscrape.com/" > data/test_urls.txt
+```
+
+**list urls to scrape**
+
+Just print the urls to scrape to stdout as a list (1 url per line), and don't store any content to disk:
+```
+python scrapebooks.py --no-content -p -F "{url}" "https://books.toscrape.com/index.html"
 ```
 
 ### Command line arguments:
@@ -80,4 +87,7 @@ options:
   -l LOGFILE, --logfile LOGFILE
                         Output logs to the specified logfile
   --no-content          Don't scrape product contents, just extract the category and product URLs. Usually set for testing/debugging purposes.
+  --print-urls, -p      Ouptut the scraped urls to stdout, using the format specified by the -F option
+  --print_urls-format PRINT_URLS_FORMAT, -F PRINT_URLS_FORMAT
+                        Specify the format to use when printing urls. Accepts two fields in brackets: '{scrape_type}' and '{url}'.
 ```
