@@ -1,16 +1,38 @@
 # openclassrooms-bookscrap
 Openclassrooms python course - project 2 - scraping tool
 
-(work in progress...)
+Scrape the product pages on https://books.toscrape.com
 
-Scrapes the data from a single product page, an entire category or the entire catalog.
-The ouptut is stored to a CSV file.
-If an existing output file is specified, then the scraping process will skip the URLs found in the existing file to avoid duplicate content and append the new URLs.
+Our tool scrapes the data from a single product page, an entire category or the entire catalog.
 
-The scraper performs some basic data filtering.
+This project relies on the Requests package to read content from remote sources and on BeautifulSoup 4 (bs4)
+package to extract the relevant data. See requirements.txt for more infos on the dependencies.
+
+## General workflow
+
+1. The scraping process is launched from the command line via the `scrapebooks.py` script,
+     which sets up the scraper (`scraper.py`). The scraping mode (single page, category or entire catalog)
+     is guessed from the URL specified when invoking the script.
+
+2. The `Scraper` class is instantiated and pilots the scraping process (see `scraper.py`)
+    - When scraping the entire catalog, first read the list of category index pages
+    (see the `ScrapeIndex` class in `scrapeindex.py`)
+
+    - Pages to scrape are loaded by a single `RemoteDataSource` object to take advantage of sessions from the requests module.
+    (see `remotedatasource.py`)
+
+3. Initialize the scraping, for each category:
+    - Load the category index with the `CategoryIndex` class (see `categoryindex.py`) in order to scrape all products pages referenced by the category.
+
+4. Iterate scraping over each book referenced by the category:
+    - Scrape each book's product page with the `BookDatareader` class. The relevant data is found with datasource-specific methods defined in the `BooksToScrapeGenerator` class (see `books_to_scrape_generators.py`)
+    - Validate the data and store it inside a `BookData` object (see `bookdata.py`)
+    - export scraped data as CSV with the `BookDataWriter` class (see `bookdatawriter.py`)
+    - Finally download and store product image to the corresponding direactory
+
 
 ## Usage
-once all packages and dependencies have been installed in a vritual environment:
+Once all packages and dependencies have been installed in a vritual environment:
 
 ```
 $ python scrapbooks.py [options] [url_to_scrape]
@@ -27,6 +49,8 @@ python scrapebooks.py -l data/scraping_logs.log -v -T -d data/scrape_cat "https:
 ```
 
 **normal usage: scrap entire catalog**
+
+Scrape the entire catalog and write data files to data/scraping_<current date>, no output to stdout, log warnings and errors to data/scraping_logs.log.
 
 ```
 python scrapebooks.py -l data/scraping_logs.log -q -T -d data/scraping "https://books.toscrape.com"
@@ -90,4 +114,64 @@ options:
   --print-urls, -p      Ouptut the scraped urls to stdout, using the format specified by the -F option
   --print_urls-format PRINT_URLS_FORMAT, -F PRINT_URLS_FORMAT
                         Specify the format to use when printing urls. Accepts two fields in brackets: '{scrape_type}' and '{url}'.
+```
+
+## Output
+
+The ouptut is stored to CSV files in an output directory specified from the command line.
+Images found on the product pages are stored as well, in an images/ subdirectory.
+
+Output directory file structure:
+
+ - <output_dir_name>/
+   - CSV files (1 CSV file per category)
+   - images/
+      - <category_name>/
+        - image files in JPEG format (1 book = 1 image file named after the book's Universal Product Code)
+
+## Handling existing data
+If an existing output file is specified, or a CSV file is found in the specified output directory,
+then the scraping process will skip the URLs found in the existing file to avoid duplicate content and append the new URLs.
+
+## Data validation
+
+The scraper performs some basic data filtering to ensure data integrity on the fly (see the `BookData` class in `bookdata.py`).
+
+However, once the scraping process is completed, we can also check the quality of the scraped data with an additional tool provided with this package:
+**validate.py**.
+
+This tool requires an additional data file, mapping the expected category names with the expected number of books per category.
+
+
+
+```
+usage: validate [-h] -d DATA_DIRECTORY --categories-specs CATEGORIES_SPECS
+                [--validate-categories VALIDATE_CATEGORIES [VALIDATE_CATEGORIES ...]]
+
+validate scraping data found in directory
+
+options:
+  -h, --help            show this help message and exit
+  -d DATA_DIRECTORY     Path to the base directory where the scraping data is stored.
+  --categories-specs CATEGORIES_SPECS, -s CATEGORIES_SPECS
+                        path to a csv file listing category names and expected produtc counts.
+  --validate-categories VALIDATE_CATEGORIES [VALIDATE_CATEGORIES ...]
+                        Specify categories to validate as a space separated list of category names.
+```
+
+example:
+
+```
+$ python validate.py -d data/scraping_2024-05-03 --categories-spec test_data/categories.csv
+```
+If the data stored in data/scraping_2024-05-03, the validation script will ouptut:
+```
+Starting validation...
+
+    Validated:
+        50/50 categories
+        1000/1000 products
+        1000/1000 images
+    
+Data is valid !
 ```
