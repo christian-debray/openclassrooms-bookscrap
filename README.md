@@ -30,6 +30,24 @@ package to extract the relevant data. See requirements.txt for more infos on the
     - export scraped data as CSV with the `BookDataWriter` class (see `bookdatawriter.py`)
     - Finally download and store product image to the corresponding direactory
 
+## Installation
+
+first clone the repository:
+```
+    $ git clone git@github.com:christian-debray/openclassrooms-bookscrap.git
+```
+
+then create a pyhton virtual environment:
+```
+    $ cd openclassrooms-bookscrap
+    $ python -m venv .env
+    $ source ./env/bin/activate
+```
+
+finally, install all dependencies:
+```
+    $ pip install -r requirements.txt
+```
 
 ## Usage
 Once all packages and dependencies have been installed in a vritual environment:
