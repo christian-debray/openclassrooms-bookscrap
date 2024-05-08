@@ -123,6 +123,13 @@ Supports Python's date and time format codes.
         default="{scrape_type}: {url}",
         help="Specify the format to use when printing urls. Accepts two fields in brackets: '{scrape_type}' and '{url}'."
     )
+    parser.add_argument(
+        '-i',
+        dest="request_delay",
+        default=0,
+        type= float,
+        help="time interval between 2 requests (defaults to 0)"
+    )
     return parser
 
 def gen_output_file_name(scrape_url: str, extension: str= "csv") -> str:
@@ -257,7 +264,7 @@ if __name__ == "__main__":
 
     scraper_options = {
         'timeout': (3.5, 7),
-        'requests_delay': 1.5,
+        'requests_delay': args.request_delay,
         'output_dir': output_base_dir,
         'scraping_generator': BooksToScrapeGenerator()
     }
